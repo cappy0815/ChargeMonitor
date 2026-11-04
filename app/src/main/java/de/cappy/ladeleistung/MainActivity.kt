@@ -223,7 +223,7 @@ fun App(prefs: Prefs) {
 fun MainScreen(live: LiveState, prefs: Prefs, displayOff: () -> Unit, go: (Screen) -> Unit) {
     val r = live.reading
     var menu by remember { mutableStateOf(false) }
-    val scaleMax = (if (r.wireless) prefs.qiMax else prefs.wiredMax).toFloat()
+    val scaleMax = prefs.scaleFor(r, live.peak)
     // Tacho passt sich an die Bildschirmhöhe an (max. 270 dp)
     val gaugeSize = (LocalConfiguration.current.screenHeightDp * 0.32f).toInt().coerceIn(170, 270)
 
@@ -262,7 +262,7 @@ fun MainScreen(live: LiveState, prefs: Prefs, displayOff: () -> Unit, go: (Scree
         Spacer(Modifier.height(4.dp))
         SourceChip(r)
         Spacer(Modifier.height(16.dp))
-        Gauge(r, scaleMax, sizeDp = gaugeSize)
+        Gauge(r, scaleMax, sizeDp = gaugeSize, showLabels = prefs.scaleLabels)
         Spacer(Modifier.height(16.dp))
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {

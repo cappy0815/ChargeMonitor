@@ -29,6 +29,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.roundToInt
 
 // ---------- Grundgerüst für Unterseiten ----------
 @Composable
@@ -165,12 +166,24 @@ fun SettingsScreen(prefs: Prefs, live: LiveState, onBack: () -> Unit, onStandby:
             }
         }
 
+        Section("Ring-Skala")
+        Panel {
+            ChoiceRow("Vollausschlag", listOf("Fest" to false, "Automatisch" to true), prefs.autoScale) { prefs.autoScale = it }
+            if (prefs.autoScale) {
+                Text("Die Skala richtet sich nach dem höchsten Wert des laufenden Ladevorgangs " +
+                    "(Spitze + 20 %, gerundet auf 5, 10, 15 … 120 W). Sie wächst mit, schrumpft aber nicht.",
+                    color = TextDim, fontSize = 13.sp, lineHeight = 18.sp)
+                Spacer(Modifier.height(12.dp))
+            } else {
+                StepSlider("Kabel", prefs.wiredMax, 10, 120, 5) { prefs.wiredMax = it }
+                StepSlider("Qi (kabellos)", prefs.qiMax, 5, 30, 1) { prefs.qiMax = it }
+            }
+            SwitchRow("Skalenstriche und Beschriftung", "0 und Höchstwert an den Ring-Enden",
+                prefs.scaleLabels) { prefs.scaleLabels = it }
+        }
+
         Section("Anzeige")
         Panel {
-            ChoiceRow("Skala Kabel (Vollausschlag)",
-                listOf("25 W" to 25, "45 W" to 45, "50 W" to 50, "65 W" to 65), prefs.wiredMax) { prefs.wiredMax = it }
-            ChoiceRow("Skala Qi (Vollausschlag)",
-                listOf("10 W" to 10, "15 W" to 15, "20 W" to 20), prefs.qiMax) { prefs.qiMax = it }
             ChoiceRow("Temperatur-Hinweis ab",
                 listOf("35 °C" to 35, "40 °C" to 40, "45 °C" to 45), prefs.tempWarn) { prefs.tempWarn = it }
             SwitchRow("Bildschirm anlassen", "Solange die App im Vordergrund ist",
@@ -198,7 +211,10 @@ fun SettingsScreen(prefs: Prefs, live: LiveState, onBack: () -> Unit, onStandby:
                 adminOn) { on -> if (on) Sleep.requestAdmin(ctx) else { Sleep.removeAdmin(ctx); adminTick++ } }
             SwitchRow("Einbrennschutz", "Inhalt wandert jede Minute ein Stück",
                 prefs.pixelShift) { prefs.pixelShift = it }
-            SwitchRow("Uhrzeit anzeigen", null, prefs.standbyClock) { prefs.standbyClock = it }
+            ChoiceRow("Uhr", listOf("Aus" to 0, "Digital" to 1, "Analog" to 2), prefs.clockStyle) { prefs.clockStyle = it }
+            if (prefs.clockStyle == 2)
+                SwitchRow("Sekundenzeiger", null, prefs.clockSeconds) { prefs.clockSeconds = it }
+            StepSlider("Ringgröße im Standby", prefs.standbyRingSize, 140, 260, 10, unit = "dp") { prefs.standbyRingSize = it }
             Spacer(Modifier.height(4.dp))
             PillButton("Standby jetzt starten", filled = true, onClick = onStandby)
             Spacer(Modifier.height(10.dp))
@@ -216,6 +232,10 @@ fun HelpScreen(onBack: () -> Unit) {
         Para("Der Ring zeigt die aktuelle Ladeleistung in Watt. Der Vollausschlag lässt sich in den Einstellungen getrennt für Kabel und Qi festlegen.")
         Para("Oben steht die Ladequelle: Kabel · Netzteil, Kabel · USB oder Qi · kabellos. Darunter Akkuspannung, Ladestrom, Ladestand und Akkutemperatur sowie der Verlauf der letzten 60 Sekunden mit Durchschnitt und Spitzenwert.")
 
+        Section("Ring-Skala")
+        Para("Unter Einstellungen → Ring-Skala legst du fest, bei wie viel Watt der Ring voll ist: fest per Schieberegler, getrennt für Kabel (10–120 W) und Qi (5–30 W), oder automatisch. Automatisch nimmt den höchsten Wert des laufenden Ladevorgangs plus 20 % und rundet auf einen glatten Wert. Die Skala wächst dabei mit, springt aber nicht wieder zurück, solange das Kabel steckt.")
+        Para("Die Striche am Ring markieren 0, ein Viertel, die Hälfte, drei Viertel und den Höchstwert. Unter den Ring-Enden stehen 0 und der Höchstwert in Watt.")
+
         Section("Warum weniger als am Netzteil?")
         Para("Gemessen wird, was im Akku ankommt: Akkuspannung × Ladestrom. Wandlerverluste im Handy und der Eigenverbrauch (Display, Funk) sind nicht enthalten. Bei Qi kommen zusätzlich die Verluste der induktiven Übertragung dazu. Ein 45-W-Netzteil zeigt deshalb hier meist deutlich unter 45 W.")
         Para("Gegen Ende der Ladung (ab etwa 80 %) senkt das Handy den Strom absichtlich ab. Das ist normal.")
@@ -224,7 +244,7 @@ fun HelpScreen(onBack: () -> Unit) {
         Para("Android liefert den Ladestrom laut Vorgabe in Mikroampere, manche Hersteller aber in Milliampere. Die App erkennt das automatisch. Zeigt sie trotzdem z. B. 0,01 W oder mehrere tausend Watt, stell in den Einstellungen unter „Messung“ die Einheit von Hand auf µA oder mA um. Der Live-Rohwert dort hilft beim Prüfen.")
 
         Section("Standby-Anzeige in der App")
-        Para("Über den Knopf „Standby“ oder das Menü startest du eine dunkle, gedimmte Anzeige mit Uhrzeit, Leistung und Ladestand. Der Bildschirm bleibt dabei an. Antippen beendet den Standby. Drückst du die Seitentaste, geht der Bildschirm wie gewohnt aus.")
+        Para("Über den Knopf „Standby“ oder das Menü startest du eine dunkle, gedimmte Anzeige mit Uhrzeit, Leistung und Ladestand. Die Uhr kann aus, digital oder analog (optional mit Sekundenzeiger) sein, die Ringgröße ist einstellbar. Der Bildschirm bleibt dabei an. Antippen beendet den Standby. Drückst du die Seitentaste, geht der Bildschirm wie gewohnt aus.")
 
         Section("Bildschirmschoner beim Laden")
         Para("Charge Monitor bringt einen Android-Bildschirmschoner mit. Der startet automatisch, wenn das Handy lädt und der Bildschirm-Timeout abläuft.")
@@ -373,4 +393,23 @@ fun PercentSlider(label: String, value: Int, onChange: (Int) -> Unit) {
         colors = SliderDefaults.colors(thumbColor = Neon, activeTrackColor = Neon,
             inactiveTrackColor = Color(0x22FFFFFF))
     )
+}
+
+/** Schieberegler mit festen Schritten, Wert rechts neben der Beschriftung. */
+@Composable
+fun StepSlider(label: String, value: Int, min: Int, max: Int, step: Int, unit: String = "W", onChange: (Int) -> Unit) {
+    Row(Modifier.fillMaxWidth()) {
+        Text(label, color = Color.White, fontSize = 15.sp, modifier = Modifier.weight(1f))
+        Text("$value $unit", color = Mint, fontSize = 15.sp, maxLines = 1, softWrap = false)
+    }
+    Slider(
+        value = value.toFloat().coerceIn(min.toFloat(), max.toFloat()),
+        onValueChange = { v -> onChange(((v - min) / step).roundToInt() * step + min) },
+        valueRange = min.toFloat()..max.toFloat(),
+        steps = (max - min) / step - 1,
+        colors = SliderDefaults.colors(thumbColor = Neon, activeTrackColor = Neon,
+            inactiveTrackColor = Color(0x22FFFFFF), activeTickColor = Color.Transparent,
+            inactiveTickColor = Color.Transparent)
+    )
+    Spacer(Modifier.height(6.dp))
 }

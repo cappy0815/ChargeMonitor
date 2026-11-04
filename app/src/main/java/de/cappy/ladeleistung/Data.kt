@@ -173,8 +173,31 @@ class Prefs private constructor(ctx: Context) {
     private val _shift = boolPref("pixelShift", true)
     var pixelShift: Boolean get() = _shift.value; set(v) { _shift.value = v; putB("pixelShift", v) }
 
-    private val _clock = boolPref("standbyClock", true)
-    var standbyClock: Boolean get() = _clock.value; set(v) { _clock.value = v; putB("standbyClock", v) }
+    /** Uhr im Standby: 0 = aus, 1 = digital, 2 = analog (alter Schalter wird übernommen) */
+    private val _clockStyle = intPref("clockStyle", if (sp.getBoolean("standbyClock", true)) 1 else 0)
+    var clockStyle: Int get() = _clockStyle.intValue; set(v) { _clockStyle.intValue = v; putI("clockStyle", v) }
+
+    private val _clockSec = boolPref("clockSeconds", false)
+    var clockSeconds: Boolean get() = _clockSec.value; set(v) { _clockSec.value = v; putB("clockSeconds", v) }
+
+    private val _ringSize = intPref("standbyRing", 190)
+    var standbyRingSize: Int get() = _ringSize.intValue; set(v) { _ringSize.intValue = v; putI("standbyRing", v) }
+
+    /** Ring-Skala: false = fest (wiredMax/qiMax), true = automatisch nach Spitzenwert */
+    private val _autoScale = boolPref("autoScale", false)
+    var autoScale: Boolean get() = _autoScale.value; set(v) { _autoScale.value = v; putB("autoScale", v) }
+
+    private val _ticks = boolPref("scaleLabels", true)
+    var scaleLabels: Boolean get() = _ticks.value; set(v) { _ticks.value = v; putB("scaleLabels", v) }
+
+    /** Vollausschlag des Rings in Watt für die aktuelle Messung */
+    fun scaleFor(r: Reading, peak: Float): Float {
+        val fixed = (if (r.wireless) qiMax else wiredMax).toFloat()
+        if (!autoScale) return fixed
+        // nächster "runder" Wert über Spitze × 1,2, schrumpft während des Ladens nicht
+        val need = maxOf(peak, r.watts) * 1.2f
+        return AUTO_STEPS.firstOrNull { it >= need } ?: AUTO_STEPS.last()
+    }
 
     private val _auto = boolPref("autoStart", false)
     var autoStart: Boolean get() = _auto.value; set(v) { _auto.value = v; putB("autoStart", v) }
@@ -186,6 +209,7 @@ class Prefs private constructor(ctx: Context) {
     var disclaimerAccepted: Boolean get() = _accepted.value; set(v) { _accepted.value = v; putB("disclaimer", v) }
 
     companion object {
+        val AUTO_STEPS = listOf(5f, 10f, 15f, 20f, 25f, 30f, 40f, 50f, 65f, 80f, 100f, 120f)
         @Volatile private var inst: Prefs? = null
         fun get(ctx: Context): Prefs =
             inst ?: synchronized(this) { inst ?: Prefs(ctx.applicationContext).also { inst = it } }

@@ -65,8 +65,10 @@ fun SourceChip(r: Reading) {
 }
 
 @Composable
-fun Gauge(r: Reading, scaleMax: Float, sizeDp: Int = 270, dimmed: Boolean = false) {
-    val target = if (r.charging) (r.watts / scaleMax).coerceIn(0f, 1f) else 0f
+fun Gauge(r: Reading, scaleMax: Float, sizeDp: Int = 270, dimmed: Boolean = false, showLabels: Boolean = true) {
+    // Skalenwechsel (z. B. Auto-Skala) weich überblenden
+    val maxAnim by animateFloatAsState(scaleMax, tween(800), label = "max")
+    val target = if (r.charging) (r.watts / maxAnim).coerceIn(0f, 1f) else 0f
     val sweep by animateFloatAsState(target, spring(dampingRatio = .8f, stiffness = 60f), label = "sweep")
     val watts by animateFloatAsState(if (r.charging) r.watts else 0f, tween(450), label = "watts")
 
@@ -91,6 +93,19 @@ fun Gauge(r: Reading, scaleMax: Float, sizeDp: Int = 270, dimmed: Boolean = fals
             val total = 270f
             drawArc(Color(if (dimmed) 0x14FFFFFF else 0x22FFFFFF), start, total, false, tl, arcSize,
                 style = Stroke(stroke, cap = StrokeCap.Round))
+            if (showLabels) {
+                // Skalenstriche bei 0, ¼, ½, ¾ und Vollausschlag (innen am Ring)
+                val rOuter = arcSize.width / 2 - stroke / 2 - 5.dp.toPx() * scale
+                val rInner = rOuter - 7.dp.toPx() * scale
+                for (k in 0..4) {
+                    val a = Math.toRadians((start + total * k / 4f).toDouble())
+                    val c = cos(a).toFloat(); val sn = sin(a).toFloat()
+                    drawLine(Color(if (dimmed) 0x22FFFFFF else 0x44FFFFFF),
+                        Offset(center.x + rInner * c, center.y + rInner * sn),
+                        Offset(center.x + rOuter * c, center.y + rOuter * sn),
+                        strokeWidth = 1.5.dp.toPx() * scale, cap = StrokeCap.Round)
+                }
+            }
             if (r.charging) {
                 if (!dimmed) drawArc(Neon.copy(alpha = glow * .25f), start, total * sweep, false, tl, arcSize,
                     style = Stroke(stroke * 2.2f, cap = StrokeCap.Round))
@@ -112,6 +127,15 @@ fun Gauge(r: Reading, scaleMax: Float, sizeDp: Int = 270, dimmed: Boolean = fals
                 fontSize = (64 * scale).sp, fontWeight = FontWeight.Light
             )
             Text("Watt", color = Neon, fontSize = (18 * scale).sp, letterSpacing = 2.sp)
+        }
+        if (showLabels) {
+            // Beschriftung an den Ring-Enden: links 0, rechts Vollausschlag
+            val end = sizeDp / 2f * .62f            // Abstand der Enden von der Mitte (≈ R·cos45°)
+            val labelColor = TextDim.copy(alpha = if (dimmed) .6f else .9f)
+            Text("0", color = labelColor, fontSize = (12 * scale).sp,
+                modifier = Modifier.align(Alignment.Center).offset(x = (-end).dp, y = (end + 6 * scale).dp))
+            Text(fmt("%.0f W", maxAnim), color = labelColor, fontSize = (12 * scale).sp,
+                modifier = Modifier.align(Alignment.Center).offset(x = end.dp, y = (end + 6 * scale).dp))
         }
     }
 }
@@ -220,18 +244,24 @@ fun StandbyDisplay(
     val contentAlpha = if (night) .5f else 1f
 
     val clock = remember(now) { SimpleDateFormat("HH:mm", Locale.GERMANY).format(now) }
-    val scaleMax = (if (r.wireless) prefs.qiMax else prefs.wiredMax).toFloat()
+    val scaleMax = prefs.scaleFor(r, live.peak)
 
     Box(modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
         Column(
             Modifier.offset { IntOffset(sx, sy) }.graphicsLayer { alpha = contentAlpha },
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            if (prefs.standbyClock) {
-                Text(clock, color = TextDim, fontSize = 44.sp, fontWeight = FontWeight.Thin)
-                Spacer(Modifier.height(18.dp))
+            when (prefs.clockStyle) {
+                1 -> {
+                    Text(clock, color = TextDim, fontSize = 44.sp, fontWeight = FontWeight.Thin)
+                    Spacer(Modifier.height(18.dp))
+                }
+                2 -> {
+                    AnalogClock(sizeDp = 120, seconds = prefs.clockSeconds)
+                    Spacer(Modifier.height(18.dp))
+                }
             }
-            Gauge(r, scaleMax, sizeDp = 190, dimmed = true)
+            Gauge(r, scaleMax, sizeDp = prefs.standbyRingSize, dimmed = true, showLabels = prefs.scaleLabels)
             Spacer(Modifier.height(14.dp))
             Text(r.sourceText + if (r.full && r.charging) " · voll" else "",
                 color = Neon.copy(alpha = .8f), fontSize = 15.sp)
@@ -268,5 +298,46 @@ fun StandbyDisplay(
                 )
             }
         }
+    }
+}
+
+/** Schlichte analoge Uhr im Grün-Stil (für den Standby). */
+@Composable
+fun AnalogClock(sizeDp: Int, seconds: Boolean, dimmed: Boolean = true) {
+    var now by remember { mutableStateOf(java.util.Calendar.getInstance()) }
+    LaunchedEffect(seconds) {
+        while (true) {
+            now = java.util.Calendar.getInstance()
+            // Mit Sekundenzeiger jede Sekunde, sonst alle 10 s neu zeichnen
+            delay(if (seconds) 1000L - System.currentTimeMillis() % 1000 else 10_000L)
+        }
+    }
+    val h = now.get(java.util.Calendar.HOUR) + now.get(java.util.Calendar.MINUTE) / 60f
+    val m = now.get(java.util.Calendar.MINUTE) + now.get(java.util.Calendar.SECOND) / 60f
+    val sec = now.get(java.util.Calendar.SECOND)
+    val tick = Color(if (dimmed) 0x55FFFFFF else 0x88FFFFFF)
+
+    Canvas(Modifier.size(sizeDp.dp)) {
+        val rad = size.minDimension / 2
+        drawCircle(Color(0x18FFFFFF), rad - 1.dp.toPx(), style = Stroke(1.5.dp.toPx()))
+        for (i in 0 until 12) {
+            val a = Math.toRadians(i * 30.0 - 90)
+            val long = i % 3 == 0
+            val r1 = rad - 4.dp.toPx(); val r2 = rad - (if (long) 13 else 9).dp.toPx()
+            drawLine(if (long) Neon.copy(alpha = .7f) else tick,
+                Offset(center.x + r1 * cos(a).toFloat(), center.y + r1 * sin(a).toFloat()),
+                Offset(center.x + r2 * cos(a).toFloat(), center.y + r2 * sin(a).toFloat()),
+                strokeWidth = (if (long) 2.5f else 1.5f).dp.toPx(), cap = StrokeCap.Round)
+        }
+        fun hand(angleDeg: Float, len: Float, width: Float, color: Color) {
+            val a = Math.toRadians(angleDeg - 90.0)
+            drawLine(color, center,
+                Offset(center.x + len * cos(a).toFloat(), center.y + len * sin(a).toFloat()),
+                strokeWidth = width, cap = StrokeCap.Round)
+        }
+        hand(h * 30f, rad * .5f, 4.dp.toPx(), TextDim)
+        hand(m * 6f, rad * .75f, 2.5.dp.toPx(), Mint.copy(alpha = .85f))
+        if (seconds) hand(sec * 6f, rad * .82f, 1.dp.toPx(), Neon)
+        drawCircle(Neon, 3.dp.toPx())
     }
 }
