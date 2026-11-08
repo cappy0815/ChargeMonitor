@@ -53,11 +53,17 @@ class ChargeWatchService : Service() {
         val open = PendingIntent.getActivity(
             this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE
         )
+        val pause = PendingIntent.getBroadcast(
+            this, 1,
+            Intent(this, ControlReceiver::class.java).setAction(ACTION_PAUSE),
+            PendingIntent.FLAG_IMMUTABLE
+        )
         val n = Notification.Builder(this, CHANNEL)
             .setSmallIcon(R.drawable.ic_stat)
             .setContentTitle("Charge Monitor bereit")
             .setContentText("Öffnet sich beim Anschließen des Ladekabels")
             .setContentIntent(open)
+            .addAction(Notification.Action.Builder(null, "Automatik pausieren", pause).build())
             .setOngoing(true)
             .build()
         if (Build.VERSION.SDK_INT >= 34)
@@ -73,7 +79,7 @@ class ChargeWatchService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (!Prefs.get(this).autoStart) { stopSelf(); return START_NOT_STICKY }
+        if (!Prefs.get(this).watchActive) { stopSelf(); return START_NOT_STICKY }
         return START_STICKY
     }
 
@@ -86,13 +92,22 @@ class ChargeWatchService : Service() {
 
     companion object {
         private const val CHANNEL = "watch"
+        const val ACTION_PAUSE = "de.cappy.ladeleistung.PAUSE"
+        const val ACTION_RESUME = "de.cappy.ladeleistung.RESUME"
 
-        /** Startet oder stoppt den Dienst passend zur Einstellung. */
+        /** Startet oder stoppt den Dienst passend zur Einstellung (inkl. Pause). */
         fun sync(ctx: Context) {
             val i = Intent(ctx, ChargeWatchService::class.java)
-            if (Prefs.get(ctx).autoStart) {
+            if (Prefs.get(ctx).watchActive) {
                 try { ctx.startForegroundService(i) } catch (_: Exception) {}
-            } else ctx.stopService(i)
+            } else ctx.stopService(i)   // beendet Dienst, Empfänger und Benachrichtigung
+            AppShortcuts.update(ctx)
+        }
+
+        /** Automatik pausieren bzw. fortsetzen (Benachrichtigung, App-Symbol, App). */
+        fun setPaused(ctx: Context, paused: Boolean) {
+            Prefs.get(ctx).autoPaused = paused
+            sync(ctx)
         }
 
         fun ignoresBatteryOptimization(ctx: Context): Boolean =
@@ -100,7 +115,17 @@ class ChargeWatchService : Service() {
     }
 }
 
-/** Startet den Dienst nach Neustart des Handys und nach App-Updates neu. */
+/** Knopf "Automatik pausieren" in der Benachrichtigung (nur app-intern erreichbar). */
+class ControlReceiver : BroadcastReceiver() {
+    override fun onReceive(c: Context, i: Intent) {
+        when (i.action) {
+            ChargeWatchService.ACTION_PAUSE -> ChargeWatchService.setPaused(c, true)
+            ChargeWatchService.ACTION_RESUME -> ChargeWatchService.setPaused(c, false)
+        }
+    }
+}
+
+/** Startet den Dienst nach Neustart des Handys und nach App-Updates neu (nicht, wenn pausiert). */
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(c: Context, i: Intent) {
         when (i.action) {

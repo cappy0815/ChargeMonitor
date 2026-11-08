@@ -202,6 +202,12 @@ class Prefs private constructor(ctx: Context) {
     private val _auto = boolPref("autoStart", false)
     var autoStart: Boolean get() = _auto.value; set(v) { _auto.value = v; putB("autoStart", v) }
 
+    /** Automatik vorübergehend pausiert: Dienst aus, keine Hintergrundaktivität */
+    private val _autoPaused = boolPref("autoPaused", false)
+    var autoPaused: Boolean get() = _autoPaused.value; set(v) { _autoPaused.value = v; putB("autoPaused", v) }
+    /** Hintergrunddienst soll laufen */
+    val watchActive: Boolean get() = autoStart && !autoPaused
+
     private val _autoStandby = boolPref("autoStandby", true)
     var autoStandby: Boolean get() = _autoStandby.value; set(v) { _autoStandby.value = v; putB("autoStandby", v) }
 

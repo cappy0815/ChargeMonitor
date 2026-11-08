@@ -277,6 +277,14 @@ fun MainScreen(live: LiveState, prefs: Prefs, displayOff: () -> Unit, go: (Scree
         Spacer(Modifier.height(12.dp))
         Sparkline(live)
         Spacer(Modifier.weight(1f))
+        if (prefs.autoStart && prefs.autoPaused) {
+            val ctx = LocalContext.current
+            Text(
+                "Automatik pausiert · fortsetzen",
+                color = Warn, fontSize = 12.sp,
+                modifier = Modifier.clickable { ChargeWatchService.setPaused(ctx, false) }.padding(bottom = 8.dp)
+            )
+        }
         if (prefs.paused && r.charging) {
             Text(
                 "Standby pausiert bis zum Abstecken · fortsetzen",

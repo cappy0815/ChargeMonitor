@@ -12,8 +12,8 @@ android {
         applicationId = "de.cappy.ladeleistung"
         minSdk = 29
         targetSdk = 35
-        versionCode = 7
-        versionName = "1.4"
+        versionCode = 8
+        versionName = "1.5"
     }
     // Signierschlüssel liegt NICHT im Repo. Angaben in keystore.properties
     // (storeFile, storePassword, keyAlias, keyPassword) – siehe README.

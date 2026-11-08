@@ -63,6 +63,18 @@
             </intent-filter>
         </receiver>
 
+        <!-- Knopf "Automatik pausieren" in der Benachrichtigung -->
+        <receiver android:name=".ControlReceiver" android:exported="false" />
+
+        <!-- Unsichtbare Activity für das Menü am App-Symbol (langes Tippen) -->
+        <activity
+            android:name=".ShortcutActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
         <receiver android:name=".BootReceiver" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />

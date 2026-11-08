@@ -228,6 +228,10 @@ fun SettingsScreen(prefs: Prefs, live: LiveState, onBack: () -> Unit, onStandby:
 fun HelpScreen(onBack: () -> Unit) {
     val ctx = LocalContext.current
     SubPage("Hilfe", onBack) {
+        Section("Projektseite")
+        Para("Neue Versionen, Download und Quellcode gibt es auf der Projektseite.")
+        ProjectLink()
+
         Section("Hauptanzeige")
         Para("Der Ring zeigt die aktuelle Ladeleistung in Watt. Der Vollausschlag lässt sich in den Einstellungen getrennt für Kabel und Qi festlegen.")
         Para("Oben steht die Ladequelle: Kabel · Netzteil, Kabel · USB oder Qi · kabellos. Darunter Akkuspannung, Ladestrom, Ladestand und Akkutemperatur sowie der Verlauf der letzten 60 Sekunden mit Durchschnitt und Spitzenwert.")
@@ -255,6 +259,10 @@ fun HelpScreen(onBack: () -> Unit) {
         Section("Beim Einstecken automatisch öffnen")
         Para("Optional in den Einstellungen unter „Automatik“. Steckst du das Ladekabel ein oder legst das Handy auf die Qi-Station, öffnet sich Charge Monitor direkt im Standby, auch über dem Sperrbildschirm. Antippen bringt dich zur normalen Ansicht; ist das Handy gesperrt, kommt dann der Sperrbildschirm. Ziehst du das Kabel wieder ab, schließt sich die App von selbst.")
         Para("Dafür braucht die App drei Dinge: die Berechtigung „Über anderen Apps einblenden“ (nur so erlaubt Android den Start aus dem Hintergrund), eine dauerhafte, unauffällige Benachrichtigung „Charge Monitor bereit“ (Android verlangt sie für Hintergrunddienste) und möglichst „Akku-Optimierung aus“, damit Samsung den Dienst nicht beendet. Nach einem Neustart startet der Dienst von selbst wieder.")
+
+        Section("Automatik pausieren")
+        Para("Solange die Automatik läuft, zeigt Android die Benachrichtigung „Charge Monitor bereit“. Wegwischen beendet den Dienst nicht. Zum Abschalten gibt es drei Wege: den Knopf „Automatik pausieren“ in der Benachrichtigung, langes Tippen auf das App-Symbol oder den Knopf in den Einstellungen unter „Automatik“.")
+        Para("Pausiert heißt: Der Hintergrunddienst wird beendet, die Benachrichtigung verschwindet, und auch nach einem Neustart startet nichts. Die App öffnet sich dann nicht mehr beim Einstecken. Fortsetzen geht über langes Tippen auf das App-Symbol, die Hauptseite oder die Einstellungen. Der Bildschirmschoner gehört nicht zur Automatik; er wird in den Android-Einstellungen ein- und ausgeschaltet.")
 
         Section("Auto-Standby")
         Para("Ist die App beim Laden offen und du bedienst sie eine Minute lang nicht, wechselt sie in die Standby-Anzeige. Das schont das Display.")
@@ -287,7 +295,7 @@ const val DISCLAIMER = """Charge Monitor zeigt Werte an, die Android und der Ger
 
 • Nutzung auf eigene Verantwortung. Es wird keine Gewähr für die Richtigkeit der Anzeige übernommen und keine Haftung für Schäden an Gerät, Akku oder Zubehör.
 
-• Für die optionale Funktion „Beim Einstecken automatisch öffnen“ nutzt die App einen Hintergrunddienst mit dauerhafter Benachrichtigung und die Berechtigung „Über anderen Apps einblenden“. Beides ist abschaltbar.
+• Für die optionale Funktion „Beim Einstecken automatisch öffnen“ nutzt die App einen Hintergrunddienst mit dauerhafter Benachrichtigung und die Berechtigung „Über anderen Apps einblenden“. Beides ist abschaltbar, der Dienst lässt sich jederzeit pausieren.
 
 • Die optionale Funktion „Display sofort ausschalten“ trägt die App als Geräteadministrator ein, ausschließlich mit dem Recht „Bildschirm sperren“. Vor dem Deinstallieren abschalten.
 
@@ -307,6 +315,7 @@ fun InfoScreen(onBack: () -> Unit) {
             Spacer(Modifier.height(6.dp))
             Text("Ladeleistung live anzeigen – Kabel, USB und Qi.", color = Mint, fontSize = 14.sp)
         }
+        ProjectLink()
         Section("Disclaimer")
         Para(DISCLAIMER)
     }
@@ -344,6 +353,7 @@ fun AutoStartBlock(prefs: Prefs) {
         "Startet direkt im Standby, auch über dem Sperrbildschirm",
         prefs.autoStart) { on ->
         prefs.autoStart = on
+        if (on) prefs.autoPaused = false
         ChargeWatchService.sync(ctx)
         if (on) {
             if (Build.VERSION.SDK_INT >= 33) notifLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -351,6 +361,15 @@ fun AutoStartBlock(prefs: Prefs) {
         }
     }
     if (prefs.autoStart) {
+        if (prefs.autoPaused) {
+            Text("Pausiert: kein Hintergrunddienst, keine Benachrichtigung.",
+                color = Warn, fontSize = 13.sp)
+            Spacer(Modifier.height(8.dp))
+            PillButton("Automatik fortsetzen", filled = true) { ChargeWatchService.setPaused(ctx, false) }
+        } else {
+            PillButton("Automatik pausieren") { ChargeWatchService.setPaused(ctx, true) }
+        }
+        Spacer(Modifier.height(10.dp))
         StatusLine("Über anderen Apps einblenden", overlayOk) { openOverlaySettings(ctx) }
         StatusLine("Akku-Optimierung aus (empfohlen)", batteryOk) {
             try {
@@ -412,4 +431,16 @@ fun StepSlider(label: String, value: Int, min: Int, max: Int, step: Int, unit: S
             inactiveTickColor = Color.Transparent)
     )
     Spacer(Modifier.height(6.dp))
+}
+
+@Composable
+fun ProjectLink() {
+    val ctx = LocalContext.current
+    Spacer(Modifier.height(8.dp))
+    PillButton("Projektseite: cappy0815.github.io") {
+        try {
+            ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://cappy0815.github.io/"))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        } catch (_: Exception) {}
+    }
 }
