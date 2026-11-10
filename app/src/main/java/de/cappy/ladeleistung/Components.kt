@@ -18,6 +18,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
@@ -339,5 +342,121 @@ fun AnalogClock(sizeDp: Int, seconds: Boolean, dimmed: Boolean = true) {
         hand(m * 6f, rad * .75f, 2.5.dp.toPx(), Mint.copy(alpha = .85f))
         if (seconds) hand(sec * 6f, rad * .82f, 1.dp.toPx(), Neon)
         drawCircle(Neon, 3.dp.toPx())
+    }
+}
+
+/** Hinweis als echte Schaltfläche: Text links, Aktion rechts, farbiger Rahmen. */
+@Composable
+fun NoticeButton(text: String, action: String, color: Color, onClick: () -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(50))
+            .background(color.copy(alpha = .12f))
+            .border(1.dp, color.copy(alpha = .6f), RoundedCornerShape(50))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 18.dp, vertical = 11.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text, color = color, fontSize = 14.sp, modifier = Modifier.weight(1f), maxLines = 1)
+        Text("$action  ›", color = color, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+    }
+}
+
+/** Verlauf im Vollbild (Querformat): Achsen, Rasterlinien, Durchschnittslinie, Kennwerte. */
+@Composable
+fun FullChart(live: LiveState, prefs: Prefs) {
+    val r = live.reading
+    val data = live.history
+    val measurer = rememberTextMeasurer()
+    val avg = if (data.isNotEmpty()) data.sum() / data.size else 0f
+
+    Column(
+        Modifier
+            .fillMaxSize()
+            .background(Brush.verticalGradient(listOf(BgTop, BgBottom)))
+            .windowInsetsPadding(WindowInsets.displayCutout)
+            .padding(horizontal = 20.dp, vertical = 12.dp)
+    ) {
+        // Kopfzeile: aktueller Wert links, Kennwerte rechts
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
+            Text(if (r.charging) fmt("%.1f", r.watts) else "–", color = Color.White,
+                fontSize = 40.sp, fontWeight = FontWeight.Light)
+            Text(" W", color = Neon, fontSize = 18.sp, modifier = Modifier.padding(bottom = 7.dp))
+            Spacer(Modifier.width(14.dp))
+            Text(r.sourceText, color = Mint, fontSize = 14.sp, modifier = Modifier.padding(bottom = 9.dp))
+            Spacer(Modifier.weight(1f))
+            Column(horizontalAlignment = Alignment.End) {
+                if (r.charging && data.isNotEmpty())
+                    Text(fmt("Ø %.1f W  ·  max %.1f W", avg, live.peak), color = Mint, fontSize = 14.sp)
+                Text(fmt("%.2f V  ·  %.2f A  ·  %d %%  ·  %.1f °C",
+                    r.voltageMv / 1000f, r.currentA, r.levelPct, r.tempC),
+                    color = if (r.tempC >= prefs.tempWarn) Warn else TextDim, fontSize = 13.sp)
+            }
+        }
+        Spacer(Modifier.height(10.dp))
+
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            if (!r.charging || data.size < 2) {
+                Text(
+                    if (!r.charging) "Kein Ladevorgang – der Verlauf startet beim Einstecken"
+                    else "Verlauf wird aufgezeichnet …",
+                    color = TextDim, fontSize = 15.sp
+                )
+            }
+            Canvas(Modifier.fillMaxSize()) {
+                val labelStyle = TextStyle(color = TextDim, fontSize = 11.sp)
+                val leftPad = 44.dp.toPx()
+                val bottomPad = 22.dp.toPx()
+                val w = size.width - leftPad
+                val h = size.height - bottomPad
+
+                // Y-Skala: glatter Wert über dem Maximum (5er-Schritte, mind. 5 W)
+                val top = maxOf(data.maxOrNull() ?: 0f, 1f) * 1.15f
+                val yMax = (kotlin.math.ceil(top / 5f) * 5f).coerceAtLeast(5f)
+
+                // Rasterlinien + Beschriftung (5 Stufen)
+                for (k in 0..4) {
+                    val v = yMax * k / 4f
+                    val y = h - v / yMax * h
+                    drawLine(Color(if (k == 0) 0x44FFFFFF else 0x1AFFFFFF),
+                        Offset(leftPad, y), Offset(size.width, y), strokeWidth = 1.dp.toPx())
+                    val t = measurer.measure(fmt("%.0f W", v), labelStyle)
+                    drawText(t, topLeft = Offset(leftPad - t.size.width - 8.dp.toPx(), y - t.size.height / 2f))
+                }
+                // Zeitachse: −60 s … jetzt
+                val seconds = live.capacity * prefs.intervalMs / 1000
+                for (k in 0..4) {
+                    val x = leftPad + w * k / 4f
+                    val label = if (k == 4) "jetzt" else "−${seconds * (4 - k) / 4} s"
+                    val t = measurer.measure(label, labelStyle)
+                    val tx = (x - t.size.width / 2f).coerceIn(leftPad, size.width - t.size.width)
+                    drawText(t, topLeft = Offset(tx, h + 6.dp.toPx()))
+                }
+
+                if (r.charging && data.size >= 2) {
+                    val stepX = w / (live.capacity - 1).coerceAtLeast(1)
+                    val offsetX = leftPad + w - stepX * (data.size - 1)
+                    val line = Path()
+                    data.forEachIndexed { i, v ->
+                        val x = offsetX + i * stepX
+                        val y = h - v / yMax * h
+                        if (i == 0) line.moveTo(x, y) else line.lineTo(x, y)
+                    }
+                    val fill = Path().apply {
+                        addPath(line); lineTo(leftPad + w, h); lineTo(offsetX, h); close()
+                    }
+                    drawPath(fill, Brush.verticalGradient(listOf(Neon.copy(alpha = .35f), Color.Transparent), endY = h))
+                    // Durchschnitt gestrichelt
+                    val ya = h - avg / yMax * h
+                    drawLine(Mint.copy(alpha = .6f), Offset(leftPad, ya), Offset(size.width, ya),
+                        strokeWidth = 1.dp.toPx(),
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f)))
+                    drawPath(line, Neon, style = Stroke(3.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+                    // Endpunkt
+                    drawCircle(Mint, 4.dp.toPx(), Offset(leftPad + w, h - data.last() / yMax * h))
+                }
+            }
+        }
     }
 }

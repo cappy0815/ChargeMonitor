@@ -125,11 +125,13 @@ class ControlReceiver : BroadcastReceiver() {
     }
 }
 
-/** Startet den Dienst nach Neustart des Handys und nach App-Updates neu (nicht, wenn pausiert). */
+/** Startet den Dienst nach Neustart des Handys und nach App-Updates neu. */
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(c: Context, i: Intent) {
         when (i.action) {
-            Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_MY_PACKAGE_REPLACED -> ChargeWatchService.sync(c)
+            // Neustart des Handys bzw. App-Update: Pause aufheben, Automatik wieder an
+            Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_MY_PACKAGE_REPLACED ->
+                ChargeWatchService.setPaused(c, false)
         }
     }
 }

@@ -240,6 +240,9 @@ fun HelpScreen(onBack: () -> Unit) {
         Para("Unter Einstellungen → Ring-Skala legst du fest, bei wie viel Watt der Ring voll ist: fest per Schieberegler, getrennt für Kabel (10–120 W) und Qi (5–30 W), oder automatisch. Automatisch nimmt den höchsten Wert des laufenden Ladevorgangs plus 20 % und rundet auf einen glatten Wert. Die Skala wächst dabei mit, springt aber nicht wieder zurück, solange das Kabel steckt.")
         Para("Die Striche am Ring markieren 0, ein Viertel, die Hälfte, drei Viertel und den Höchstwert. Unter den Ring-Enden stehen 0 und der Höchstwert in Watt.")
 
+        Section("Verlauf im Vollbild")
+        Para("Drehst du das Handy ins Querformat, zeigt die Hauptseite den Verlauf der letzten 60 Sekunden groß im Vollbild: mit Watt-Skala, Zeitachse, gestrichelter Durchschnittslinie und den aktuellen Werten oben. Zurück ins Hochformat drehen, dann kommt die normale Ansicht. Ist die automatische Drehung des Handys gesperrt, bleibt die App hochkant. Die Standby-Anzeige bleibt immer im Hochformat.")
+
         Section("Warum weniger als am Netzteil?")
         Para("Gemessen wird, was im Akku ankommt: Akkuspannung × Ladestrom. Wandlerverluste im Handy und der Eigenverbrauch (Display, Funk) sind nicht enthalten. Bei Qi kommen zusätzlich die Verluste der induktiven Übertragung dazu. Ein 45-W-Netzteil zeigt deshalb hier meist deutlich unter 45 W.")
         Para("Gegen Ende der Ladung (ab etwa 80 %) senkt das Handy den Strom absichtlich ab. Das ist normal.")
@@ -262,7 +265,7 @@ fun HelpScreen(onBack: () -> Unit) {
 
         Section("Automatik pausieren")
         Para("Solange die Automatik läuft, zeigt Android die Benachrichtigung „Charge Monitor bereit“. Wegwischen beendet den Dienst nicht. Zum Abschalten gibt es drei Wege: den Knopf „Automatik pausieren“ in der Benachrichtigung, langes Tippen auf das App-Symbol oder den Knopf in den Einstellungen unter „Automatik“.")
-        Para("Pausiert heißt: Der Hintergrunddienst wird beendet, die Benachrichtigung verschwindet, und auch nach einem Neustart startet nichts. Die App öffnet sich dann nicht mehr beim Einstecken. Fortsetzen geht über langes Tippen auf das App-Symbol, die Hauptseite oder die Einstellungen. Der Bildschirmschoner gehört nicht zur Automatik; er wird in den Android-Einstellungen ein- und ausgeschaltet.")
+        Para("Pausiert heißt: Der Hintergrunddienst wird beendet und die Benachrichtigung verschwindet. Die App öffnet sich dann nicht mehr beim Einstecken. Die Pause ist vorübergehend: Sie endet automatisch, sobald du die App das nächste Mal öffnest oder das Handy neu startest. Vorher fortsetzen geht über langes Tippen auf das App-Symbol oder die Einstellungen. Der Bildschirmschoner gehört nicht zur Automatik; er wird in den Android-Einstellungen ein- und ausgeschaltet.")
 
         Section("Auto-Standby")
         Para("Ist die App beim Laden offen und du bedienst sie eine Minute lang nicht, wechselt sie in die Standby-Anzeige. Das schont das Display.")

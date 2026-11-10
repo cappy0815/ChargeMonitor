@@ -4,6 +4,8 @@ package de.cappy.ladeleistung
 
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.ActivityInfo
+import android.content.res.Configuration
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -56,6 +58,12 @@ class MainActivity : ComponentActivity() {
         handleIntent(intent)
     }
 
+    override fun onStart() {
+        super.onStart()
+        // Automatik-Pause gilt nur bis zum nächsten Öffnen der App
+        if (Prefs.get(this).autoPaused) ChargeWatchService.setPaused(this, false)
+    }
+
     override fun onResume() {
         super.onResume()
         AppState.resumeTick.intValue++
@@ -77,6 +85,7 @@ fun App(prefs: Prefs) {
     var screen by rememberSaveable { mutableStateOf(Screen.MAIN) }
     val activity = LocalContext.current as Activity
     val autoLaunched = AppState.autoLaunched.value
+    val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     var lastTouch by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var seenCharging by remember { mutableStateOf(false) }
 
@@ -151,17 +160,22 @@ fun App(prefs: Prefs) {
     }
 
     // Auto-Standby: beim Laden nach 60 s ohne Bedienung (nicht, wenn pausiert)
-    LaunchedEffect(screen, lastTouch, live.reading.charging, prefs.autoStandby, prefs.paused) {
-        if (screen == Screen.MAIN && live.reading.charging && prefs.autoStandby && !prefs.paused) {
+    // (nicht im Querformat: dort wird bewusst der Verlauf angesehen)
+    LaunchedEffect(screen, lastTouch, live.reading.charging, prefs.autoStandby, prefs.paused, landscape) {
+        if (screen == Screen.MAIN && live.reading.charging && prefs.autoStandby && !prefs.paused && !landscape) {
             kotlinx.coroutines.delay(60_000)
             screen = Screen.STANDBY
         }
     }
 
     // Bildschirm an / Helligkeit / Vollbild je nach Seite
-    DisposableEffect(screen, prefs.keepScreenOn, autoLaunched) {
+    DisposableEffect(screen, prefs.keepScreenOn, autoLaunched, landscape) {
         val w = activity.window
         val standby = screen == Screen.STANDBY
+        // Standby immer hochkant, sonst folgt die App der Drehung (respektiert die Drehsperre)
+        activity.requestedOrientation =
+            if (standby) ActivityInfo.SCREEN_ORIENTATION_PORTRAIT else ActivityInfo.SCREEN_ORIENTATION_USER
+        val fullscreen = standby || (landscape && screen == Screen.MAIN)
         // Nur der automatisch gestartete Standby darf über dem Sperrbildschirm liegen
         val overLock = standby && autoLaunched
         activity.setShowWhenLocked(overLock)
@@ -173,7 +187,7 @@ fun App(prefs: Prefs) {
             screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
         }
         val ic = WindowCompat.getInsetsController(w, w.decorView)
-        if (standby) {
+        if (fullscreen) {
             ic.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             ic.hide(WindowInsetsCompat.Type.systemBars())
         } else ic.show(WindowInsetsCompat.Type.systemBars())
@@ -201,7 +215,9 @@ fun App(prefs: Prefs) {
         label = "screen"
     ) { s ->
         when (s) {
-            Screen.MAIN -> MainScreen(live, prefs, displayOff) { screen = it }
+            Screen.MAIN ->
+                if (landscape) FullChart(live, prefs)
+                else MainScreen(live, prefs, displayOff) { screen = it }
             Screen.SETTINGS -> SettingsScreen(prefs, live, { screen = Screen.MAIN }, { screen = Screen.STANDBY })
             Screen.HELP -> HelpScreen { screen = Screen.MAIN }
             Screen.INFO -> InfoScreen { screen = Screen.MAIN }
@@ -279,18 +295,12 @@ fun MainScreen(live: LiveState, prefs: Prefs, displayOff: () -> Unit, go: (Scree
         Spacer(Modifier.weight(1f))
         if (prefs.autoStart && prefs.autoPaused) {
             val ctx = LocalContext.current
-            Text(
-                "Automatik pausiert · fortsetzen",
-                color = Warn, fontSize = 12.sp,
-                modifier = Modifier.clickable { ChargeWatchService.setPaused(ctx, false) }.padding(bottom = 8.dp)
-            )
+            NoticeButton("Automatik pausiert", "Fortsetzen", Warn) { ChargeWatchService.setPaused(ctx, false) }
+            Spacer(Modifier.height(10.dp))
         }
         if (prefs.paused && r.charging) {
-            Text(
-                "Standby pausiert bis zum Abstecken · fortsetzen",
-                color = TextDim, fontSize = 12.sp,
-                modifier = Modifier.clickable { prefs.unpause() }.padding(bottom = 8.dp)
-            )
+            NoticeButton("Standby aus bis zum Abstecken", "Fortsetzen", Mint) { prefs.unpause() }
+            Spacer(Modifier.height(10.dp))
         }
         Row(
             Modifier.fillMaxWidth().padding(bottom = 14.dp),

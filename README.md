@@ -3,7 +3,7 @@
 Zeigt live, mit wie viel Watt das Handy gerade lädt, per Kabel, USB oder Qi.
 Android-App im dunkelgrünen Design, entstanden für das Samsung Galaxy S25 Ultra.
 
-**Aktuelle Version:** 1.5
+**Aktuelle Version:** 1.6
 
 <!-- Screenshot: Datei als docs/screenshot.png hochladen, dann die nächste Zeile einkommentieren -->
 <!-- ![Charge Monitor](docs/screenshot.png) -->
@@ -12,13 +12,13 @@ Android-App im dunkelgrünen Design, entstanden für das Samsung Galaxy S25 Ultr
 
 - Ladeleistung in Watt als animierter Ring, dazu Spannung, Strom, Ladestand und Akkutemperatur
 - Erkennt die Ladequelle: Netzteil, USB oder Qi (kabellos)
-- Verlauf der letzten 60 Sekunden mit Durchschnitt und Spitzenwert
+- Verlauf der letzten 60 Sekunden mit Durchschnitt und Spitzenwert; im Querformat groß im Vollbild
 - Ring-Skala fest (getrennt für Kabel und Qi) oder automatisch nach Spitzenwert, mit Skalenbeschriftung
 - Standby-Anzeige: dunkel, gedimmt, mit digitaler oder analoger Uhr, einstellbarer Ringgröße und Einbrennschutz für OLED-Displays
 - Nachtmodus von 22 bis 6 Uhr mit eigener, sehr niedriger Helligkeit
 - Bildschirmschoner, der beim Laden automatisch startet
 - Optional: App öffnet sich beim Einstecken des Ladekabels direkt im Standby
-- Automatik jederzeit pausierbar: per Knopf in der Benachrichtigung oder durch langes Tippen auf das App-Symbol
+- Automatik vorübergehend pausierbar (bis zum nächsten Öffnen der App oder Neustart): per Knopf in der Benachrichtigung oder durch langes Tippen auf das App-Symbol
 - „Display aus“: Standby für den laufenden Ladevorgang abschalten, auf Wunsch sofort wie mit der Seitentaste
 - Temperatur-Hinweis, einstellbare Skala für Kabel und Qi, Hilfe und Disclaimer in der App
 
