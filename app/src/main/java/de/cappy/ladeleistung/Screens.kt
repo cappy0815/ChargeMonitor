@@ -197,6 +197,9 @@ fun SettingsScreen(prefs: Prefs, live: LiveState, onBack: () -> Unit, onStandby:
                 prefs.autoStandby) { prefs.autoStandby = it }
         }
 
+        Section("Updates")
+        Panel { UpdateBlock() }
+
         Section("Standby-Anzeige & Bildschirmschoner")
         Panel {
             PercentSlider("Helligkeit tagsüber", prefs.standbyBrightness) { prefs.standbyBrightness = it }
@@ -231,6 +234,9 @@ fun HelpScreen(onBack: () -> Unit) {
         Section("Projektseite")
         Para("Neue Versionen, Download und Quellcode gibt es auf der Projektseite.")
         ProjectLink()
+
+        Section("Updates")
+        Para("Charge Monitor sucht beim Start höchstens einmal am Tag nach einer neuen Version (in den Einstellungen abschaltbar), von Hand geht es mit „Jetzt prüfen“ unter Einstellungen oder Info. Gibt es etwas Neues, erscheint oben links „⬆ Update“. „Herunterladen“ öffnet die APK im Browser, danach die Datei antippen und drüber installieren. Einstellungen bleiben erhalten. Installiert wird nie automatisch.")
 
         Section("Hauptanzeige")
         Para("Der Ring zeigt die aktuelle Ladeleistung in Watt. Der Vollausschlag lässt sich in den Einstellungen getrennt für Kabel und Qi festlegen.")
@@ -302,7 +308,7 @@ const val DISCLAIMER = """Charge Monitor zeigt Werte an, die Android und der Ger
 
 • Die optionale Funktion „Display sofort ausschalten“ trägt die App als Geräteadministrator ein, ausschließlich mit dem Recht „Bildschirm sperren“. Vor dem Deinstallieren abschalten.
 
-• Datenschutz: Die App hat keine Internet-Berechtigung, nutzt keine Konten, zeigt keine Werbung und überträgt keine Daten. Einstellungen werden nur lokal auf dem Gerät gespeichert."""
+• Datenschutz: Einzige Internetverbindung ist die abschaltbare Update-Prüfung. Sie liest die Versionsdatei auf cappy0815.github.io (Rückfall: GitHub). Es werden keine Daten aus der App gesendet, es gibt keine Konten, keine Werbung und keine Analyse. Einstellungen werden nur lokal auf dem Gerät gespeichert."""
 
 @Composable
 fun InfoScreen(onBack: () -> Unit) {
@@ -318,9 +324,26 @@ fun InfoScreen(onBack: () -> Unit) {
             Spacer(Modifier.height(6.dp))
             Text("Ladeleistung live anzeigen – Kabel, USB und Qi.", color = Mint, fontSize = 14.sp)
         }
+        Spacer(Modifier.height(10.dp))
+        PillButton("Quellcode auf GitHub") { openUrl(ctx, GITHUB_URL) }
         ProjectLink()
+
+        Section("Updates")
+        Panel { UpdateBlock() }
+
+        Section("Neu in dieser Version")
+        Panel {
+            CHANGELOG.forEachIndexed { i, (v, items) ->
+                if (i > 0) Spacer(Modifier.height(12.dp))
+                Text("Version $v", color = if (v == version) Neon else Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                items.forEach { Text("•  $it", color = TextDim, fontSize = 13.sp, lineHeight = 18.sp) }
+            }
+        }
+
         Section("Disclaimer")
         Para(DISCLAIMER)
+        Spacer(Modifier.height(8.dp))
+        Text("Entwickelt von MCHLNWK gemeinsam mit dem KI-Assistenten Justus Jonas.", color = TextDim, fontSize = 12.sp)
     }
 }
 

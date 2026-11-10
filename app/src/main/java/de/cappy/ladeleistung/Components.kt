@@ -136,9 +136,9 @@ fun Gauge(r: Reading, scaleMax: Float, sizeDp: Int = 270, dimmed: Boolean = fals
             val end = sizeDp / 2f * .62f            // Abstand der Enden von der Mitte (≈ R·cos45°)
             val labelColor = TextDim.copy(alpha = if (dimmed) .6f else .9f)
             Text("0", color = labelColor, fontSize = (12 * scale).sp,
-                modifier = Modifier.align(Alignment.Center).offset(x = (-end).dp, y = (end + 6 * scale).dp))
+                modifier = Modifier.align(Alignment.Center).offset(x = (-end).dp, y = (end + 26 * scale).dp))
             Text(fmt("%.0f W", maxAnim), color = labelColor, fontSize = (12 * scale).sp,
-                modifier = Modifier.align(Alignment.Center).offset(x = end.dp, y = (end + 6 * scale).dp))
+                modifier = Modifier.align(Alignment.Center).offset(x = end.dp, y = (end + 26 * scale).dp))
         }
     }
 }
@@ -345,22 +345,19 @@ fun AnalogClock(sizeDp: Int, seconds: Boolean, dimmed: Boolean = true) {
     }
 }
 
-/** Hinweis als echte Schaltfläche: Text links, Aktion rechts, farbiger Rahmen. */
+/** Kleiner Hinweis-Chip mit Aktion (antippbar), farbiger Rahmen. */
 @Composable
-fun NoticeButton(text: String, action: String, color: Color, onClick: () -> Unit) {
-    Row(
-        Modifier
-            .fillMaxWidth()
+fun NoticeChip(text: String, color: Color, onClick: () -> Unit) {
+    Text(
+        text, color = color, fontSize = 13.sp, fontWeight = FontWeight.Medium,
+        maxLines = 1, softWrap = false,
+        modifier = Modifier
             .clip(RoundedCornerShape(50))
             .background(color.copy(alpha = .12f))
-            .border(1.dp, color.copy(alpha = .6f), RoundedCornerShape(50))
+            .border(1.dp, color.copy(alpha = .55f), RoundedCornerShape(50))
             .clickable(onClick = onClick)
-            .padding(horizontal = 18.dp, vertical = 11.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(text, color = color, fontSize = 14.sp, modifier = Modifier.weight(1f), maxLines = 1)
-        Text("$action  ›", color = color, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-    }
+            .padding(horizontal = 14.dp, vertical = 6.dp)
+    )
 }
 
 /** Verlauf im Vollbild (Querformat): Achsen, Rasterlinien, Durchschnittslinie, Kennwerte. */
@@ -411,13 +408,15 @@ fun FullChart(live: LiveState, prefs: Prefs) {
                 val w = size.width - leftPad
                 val h = size.height - bottomPad
 
-                // Y-Skala: glatter Wert über dem Maximum (5er-Schritte, mind. 5 W)
+                // Y-Skala mit glatten Schritten (1, 2, 5, 10, 20, 25, 50 W), höchstens 6 Stufen
                 val top = maxOf(data.maxOrNull() ?: 0f, 1f) * 1.15f
-                val yMax = (kotlin.math.ceil(top / 5f) * 5f).coerceAtLeast(5f)
+                val step = listOf(1f, 2f, 5f, 10f, 20f, 25f, 50f).first { kotlin.math.ceil(top / it) <= 6 }
+                val n = kotlin.math.ceil(top / step).toInt().coerceAtLeast(2)
+                val yMax = n * step
 
-                // Rasterlinien + Beschriftung (5 Stufen)
-                for (k in 0..4) {
-                    val v = yMax * k / 4f
+                // Rasterlinien + Beschriftung
+                for (k in 0..n) {
+                    val v = step * k
                     val y = h - v / yMax * h
                     drawLine(Color(if (k == 0) 0x44FFFFFF else 0x1AFFFFFF),
                         Offset(leftPad, y), Offset(size.width, y), strokeWidth = 1.dp.toPx())

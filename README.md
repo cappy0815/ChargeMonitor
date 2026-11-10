@@ -3,7 +3,7 @@
 Zeigt live, mit wie viel Watt das Handy gerade lädt, per Kabel, USB oder Qi.
 Android-App im dunkelgrünen Design, entstanden für das Samsung Galaxy S25 Ultra.
 
-**Aktuelle Version:** 1.6
+**Download:** [cappy0815.github.io](https://cappy0815.github.io/#charge-monitor) · aktuelle Version **1.7**
 
 <!-- Screenshot: Datei als docs/screenshot.png hochladen, dann die nächste Zeile einkommentieren -->
 <!-- ![Charge Monitor](docs/screenshot.png) -->
@@ -20,13 +20,14 @@ Android-App im dunkelgrünen Design, entstanden für das Samsung Galaxy S25 Ultr
 - Optional: App öffnet sich beim Einstecken des Ladekabels direkt im Standby
 - Automatik vorübergehend pausierbar (bis zum nächsten Öffnen der App oder Neustart): per Knopf in der Benachrichtigung oder durch langes Tippen auf das App-Symbol
 - „Display aus“: Standby für den laufenden Ladevorgang abschalten, auf Wunsch sofort wie mit der Seitentaste
-- Temperatur-Hinweis, einstellbare Skala für Kabel und Qi, Hilfe und Disclaimer in der App
+- Update-Prüfung über die Projektseite: täglich automatisch (abschaltbar) oder von Hand, „⬆ Update“ bei neuer Version
+- Temperatur-Hinweis, Hilfe, Versionsgeschichte und Disclaimer in der App
 
 Gemessen wird die Leistung, die im Akku ankommt (Akkuspannung × Ladestrom). Sie ist kleiner als die Leistung am Netzteil. Die Werte stammen aus der Akku-Schnittstelle von Android und sind nicht kalibriert.
 
 ## Installation
 
-Die fertige APK gibt es unter [Releases](../../releases). Die App steht nicht im Play Store. Beim ersten Installieren fragt Android, ob Installationen aus dieser Quelle erlaubt werden sollen.
+Die fertige APK gibt es auf der [Projektseite](https://cappy0815.github.io/#charge-monitor). Die App steht nicht im Play Store. Beim ersten Installieren fragt Android, ob Installationen aus dieser Quelle erlaubt werden sollen.
 
 Voraussetzung: Android 10 oder neuer.
 
@@ -34,15 +35,23 @@ Wer „Display sofort ausschalten“ nutzt, muss diese Option vor dem Deinstalli
 
 ## Berechtigungen
 
-Die App hat keine Internet-Berechtigung und überträgt keine Daten. Alle weiteren Berechtigungen gehören zu optionalen Funktionen:
+Alle Berechtigungen außer Internet gehören zu optionalen Funktionen:
 
 | Berechtigung | Wofür |
 |---|---|
+| Internet | nur für die abschaltbare Update-Prüfung |
 | Über anderen Apps einblenden | Start beim Einstecken des Ladekabels |
 | Vordergrunddienst, Benachrichtigungen | Hintergrunddienst „Charge Monitor bereit“ für den Start beim Einstecken |
 | Nach dem Neustart starten | Hintergrunddienst nach dem Neustart wieder aktivieren |
 | Akku-Optimierung ignorieren | Damit der Hintergrunddienst nicht beendet wird |
 | Geräteadministrator (nur „Bildschirm sperren“) | „Display sofort ausschalten“ |
+
+## Datenschutz
+
+Messwerte und Einstellungen bleiben auf dem Gerät. Einzige Internetverbindung ist die abschaltbare
+Update-Prüfung: Sie liest `https://cappy0815.github.io/downloads/chargemonitor.json` (Rückfall: neuestes
+GitHub-Release dieses Repos). Es werden keine Daten aus der App gesendet. Installiert wird nichts
+automatisch: Bei einer neuen Version erscheint „⬆ Update“, ein Tipp öffnet die APK im Browser.
 
 ## Selbst bauen
 

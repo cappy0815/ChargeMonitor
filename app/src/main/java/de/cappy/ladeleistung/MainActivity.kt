@@ -21,6 +21,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
@@ -196,6 +198,11 @@ fun App(prefs: Prefs) {
 
     BackHandler(enabled = screen != Screen.MAIN) { AppState.autoLaunched.value = false; screen = Screen.MAIN }
 
+    // Update-Prüfung höchstens einmal pro Tag beim Start
+    val ctxU = LocalContext.current
+    LaunchedEffect(Unit) { Update.load(ctxU); if (Update.due()) Update.check(ctxU) }
+    UpdateDialog()
+
     if (!prefs.disclaimerAccepted) {
         DisclaimerScreen { prefs.disclaimerAccepted = true }
         return
@@ -240,8 +247,6 @@ fun MainScreen(live: LiveState, prefs: Prefs, displayOff: () -> Unit, go: (Scree
     val r = live.reading
     var menu by remember { mutableStateOf(false) }
     val scaleMax = prefs.scaleFor(r, live.peak)
-    // Tacho passt sich an die Bildschirmhöhe an (max. 270 dp)
-    val gaugeSize = (LocalConfiguration.current.screenHeightDp * 0.32f).toInt().coerceIn(170, 270)
 
     Column(
         Modifier
@@ -277,33 +282,46 @@ fun MainScreen(live: LiveState, prefs: Prefs, displayOff: () -> Unit, go: (Scree
         }
         Spacer(Modifier.height(4.dp))
         SourceChip(r)
-        Spacer(Modifier.height(16.dp))
-        Gauge(r, scaleMax, sizeDp = gaugeSize, showLabels = prefs.scaleLabels)
-        Spacer(Modifier.height(16.dp))
+        // Hinweise als kleine Chips direkt unter der Ladequelle (nehmen unten keinen Platz weg)
+        val ctx = LocalContext.current
+        val notes = buildList<Triple<String, Color, () -> Unit>> {
+            if (Update.available(ctx)) add(Triple("⬆ Version ${Update.latest} verfügbar", Neon) { Update.showDialog = true })
+            if (prefs.autoStart && prefs.autoPaused)
+                add(Triple("Automatik pausiert · Fortsetzen ›", Warn) { ChargeWatchService.setPaused(ctx, false) })
+            if (prefs.paused && r.charging) add(Triple("Standby pausiert · Fortsetzen ›", Mint) { prefs.unpause() })
+        }
+        notes.forEach { (t, c, a) -> Spacer(Modifier.height(8.dp)); NoticeChip(t, c, a) }
+        Spacer(Modifier.height(12.dp))
 
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Stat("Spannung", fmt("%.2f V", r.voltageMv / 1000f), Modifier.weight(1f))
-            Stat("Strom", if (r.supported) fmt("%.2f A", r.currentA) else "n. v.", Modifier.weight(1f))
+        // Mitte: Tacho passt sich an die freie Höhe an; reicht sie trotzdem nicht, wird gescrollt
+        BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+            val fixed = 334.dp   // Kacheln, Verlauf und Abstände
+            val gauge = (maxHeight - fixed).value.toInt().coerceIn(150, 270)
+            Column(
+                Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Spacer(Modifier.height(4.dp))   // Platz für den Leuchtrand oben
+                Gauge(r, scaleMax, sizeDp = gauge, showLabels = prefs.scaleLabels)
+                Spacer(Modifier.height(16.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Stat("Spannung", fmt("%.2f V", r.voltageMv / 1000f), Modifier.weight(1f))
+                    Stat("Strom", if (r.supported) fmt("%.2f A", r.currentA) else "n. v.", Modifier.weight(1f))
+                }
+                Spacer(Modifier.height(12.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Stat("Akku", "${r.levelPct} %", Modifier.weight(1f))
+                    Stat("Temperatur", fmt("%.1f °C", r.tempC), Modifier.weight(1f), warn = r.tempC >= prefs.tempWarn)
+                }
+                Spacer(Modifier.height(12.dp))
+                Sparkline(live)
+                Spacer(Modifier.height(12.dp))
+            }
         }
-        Spacer(Modifier.height(12.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Stat("Akku", "${r.levelPct} %", Modifier.weight(1f))
-            Stat("Temperatur", fmt("%.1f °C", r.tempC), Modifier.weight(1f), warn = r.tempC >= prefs.tempWarn)
-        }
-        Spacer(Modifier.height(12.dp))
-        Sparkline(live)
-        Spacer(Modifier.weight(1f))
-        if (prefs.autoStart && prefs.autoPaused) {
-            val ctx = LocalContext.current
-            NoticeButton("Automatik pausiert", "Fortsetzen", Warn) { ChargeWatchService.setPaused(ctx, false) }
-            Spacer(Modifier.height(10.dp))
-        }
-        if (prefs.paused && r.charging) {
-            NoticeButton("Standby aus bis zum Abstecken", "Fortsetzen", Mint) { prefs.unpause() }
-            Spacer(Modifier.height(10.dp))
-        }
+
+        // Unten fest: die beiden Knöpfe
         Row(
-            Modifier.fillMaxWidth().padding(bottom = 14.dp),
+            Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 14.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Box(Modifier.weight(1f)) { PillButton("Standby") { prefs.unpause(); go(Screen.STANDBY) } }
