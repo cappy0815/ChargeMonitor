@@ -249,6 +249,10 @@ fun HelpScreen(onBack: () -> Unit) {
         Section("Verlauf im Vollbild")
         Para("Drehst du das Handy ins Querformat, zeigt die Hauptseite den Verlauf der letzten 60 Sekunden groß im Vollbild: mit Watt-Skala, Zeitachse, gestrichelter Durchschnittslinie und den aktuellen Werten oben. Zurück ins Hochformat drehen, dann kommt die normale Ansicht. Ist die automatische Drehung des Handys gesperrt, bleibt die App hochkant. Die Standby-Anzeige bleibt immer im Hochformat.")
 
+        Section("Restladezeit")
+        Para("Unter dem Ring steht, wann der Akku voll ist, z. B. „Voll in 1 h 12 min · 16:24 Uhr“. Zuerst wird Androids eigene Berechnung genutzt. Liefert das Handy dort nichts, schätzt Charge Monitor selbst: Nach etwa 2 Minuten Laden wird aus dem Anstieg der Akkuladung hochgerechnet. Diese Werte stehen mit „ca.“ und „(geschätzt)“ da.")
+        Para("Die eigene Schätzung rechnet linear. Ab etwa 80 % lädt das Handy langsamer, die angezeigte Zeit ist dann eher zu kurz und wird beim Weiterladen genauer. Ist „Akku schützen“ aktiv und das Handy hört z. B. bei 80 % auf, rechnet die Anzeige trotzdem bis 100 %.")
+
         Section("Warum weniger als am Netzteil?")
         Para("Gemessen wird, was im Akku ankommt: Akkuspannung × Ladestrom. Wandlerverluste im Handy und der Eigenverbrauch (Display, Funk) sind nicht enthalten. Bei Qi kommen zusätzlich die Verluste der induktiven Übertragung dazu. Ein 45-W-Netzteil zeigt deshalb hier meist deutlich unter 45 W.")
         Para("Gegen Ende der Ladung (ab etwa 80 %) senkt das Handy den Strom absichtlich ab. Das ist normal.")

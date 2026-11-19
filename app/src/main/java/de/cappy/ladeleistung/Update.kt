@@ -27,6 +27,10 @@ const val PROJECT_URL = "https://cappy0815.github.io/#charge-monitor"
 
 /** Versionsgeschichte, neueste zuerst */
 val CHANGELOG = listOf(
+    "1.8" to listOf(
+        "Restladezeit: „Voll in … · Uhrzeit“ unter dem Ring, in der Standby-Anzeige und im Querformat",
+        "Nutzt Androids Berechnung, sonst eigene Schätzung aus dem Ladeverlauf (mit „ca.“ gekennzeichnet)"
+    ),
     "1.7" to listOf(
         "Update-Prüfung über die Projektseite: täglich automatisch (abschaltbar) oder mit „Jetzt prüfen“",
         "„⬆ Update“-Knopf oben, wenn eine neue Version bereitliegt",

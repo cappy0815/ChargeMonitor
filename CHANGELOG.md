@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.8 (19.11.2026)
+- Restladezeit: „Voll in … · Uhrzeit“ unter dem Ring, in der Standby-Anzeige und im Querformat
+- Nutzt Androids Berechnung (computeChargeTimeRemaining), sonst eigene Schätzung aus dem Ladeverlauf (mit „ca.“ gekennzeichnet)
+
 ## 1.7 (10.11.2026)
 - Update-Prüfung über die Projektseite: beim Start höchstens einmal am Tag (abschaltbar) oder von Hand mit „Jetzt prüfen“
 - Hinweis „⬆ Version … verfügbar“ auf der Hauptseite, Dialog mit „Herunterladen“

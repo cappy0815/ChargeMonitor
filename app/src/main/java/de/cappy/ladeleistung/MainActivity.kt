@@ -295,7 +295,7 @@ fun MainScreen(live: LiveState, prefs: Prefs, displayOff: () -> Unit, go: (Scree
 
         // Mitte: Tacho passt sich an die freie Höhe an; reicht sie trotzdem nicht, wird gescrollt
         BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
-            val fixed = 334.dp   // Kacheln, Verlauf und Abstände
+            val fixed = 356.dp   // Restzeit, Kacheln, Verlauf und Abstände
             val gauge = (maxHeight - fixed).value.toInt().coerceIn(150, 270)
             Column(
                 Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
@@ -303,7 +303,11 @@ fun MainScreen(live: LiveState, prefs: Prefs, displayOff: () -> Unit, go: (Scree
             ) {
                 Spacer(Modifier.height(4.dp))   // Platz für den Leuchtrand oben
                 Gauge(r, scaleMax, sizeDp = gauge, showLabels = prefs.scaleLabels)
-                Spacer(Modifier.height(16.dp))
+                remainText(live)?.let {
+                    Spacer(Modifier.height(4.dp))
+                    Text(it, color = Mint, fontSize = 14.sp, maxLines = 1, softWrap = false)
+                }
+                Spacer(Modifier.height(14.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Stat("Spannung", fmt("%.2f V", r.voltageMv / 1000f), Modifier.weight(1f))
                     Stat("Strom", if (r.supported) fmt("%.2f A", r.currentA) else "n. v.", Modifier.weight(1f))

@@ -3,7 +3,7 @@
 Zeigt live, mit wie viel Watt das Handy gerade lädt, per Kabel, USB oder Qi.
 Android-App im dunkelgrünen Design, entstanden für das Samsung Galaxy S25 Ultra.
 
-**Download:** [cappy0815.github.io](https://cappy0815.github.io/#charge-monitor) · aktuelle Version **1.7**
+**Download:** [cappy0815.github.io](https://cappy0815.github.io/#charge-monitor) · aktuelle Version **1.8**
 
 <!-- Screenshot: Datei als docs/screenshot.png hochladen, dann die nächste Zeile einkommentieren -->
 <!-- ![Charge Monitor](docs/screenshot.png) -->
@@ -12,6 +12,7 @@ Android-App im dunkelgrünen Design, entstanden für das Samsung Galaxy S25 Ultr
 
 - Ladeleistung in Watt als animierter Ring, dazu Spannung, Strom, Ladestand und Akkutemperatur
 - Erkennt die Ladequelle: Netzteil, USB oder Qi (kabellos)
+- Restladezeit bis voll mit Uhrzeit (Androids Berechnung, sonst eigene Schätzung)
 - Verlauf der letzten 60 Sekunden mit Durchschnitt und Spitzenwert; im Querformat groß im Vollbild
 - Ring-Skala fest (getrennt für Kabel und Qi) oder automatisch nach Spitzenwert, mit Skalenbeschriftung
 - Standby-Anzeige: dunkel, gedimmt, mit digitaler oder analoger Uhr, einstellbarer Ringgröße und Einbrennschutz für OLED-Displays

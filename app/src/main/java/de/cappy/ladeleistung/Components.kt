@@ -268,6 +268,10 @@ fun StandbyDisplay(
             Spacer(Modifier.height(14.dp))
             Text(r.sourceText + if (r.full && r.charging) " · voll" else "",
                 color = Neon.copy(alpha = .8f), fontSize = 15.sp)
+            remainText(live)?.takeIf { !r.full && r.levelPct < 100 }?.let {
+                Spacer(Modifier.height(4.dp))
+                Text(it.removeSuffix(" (geschätzt)"), color = TextDim, fontSize = 13.sp, maxLines = 1, softWrap = false)
+            }
             Spacer(Modifier.height(10.dp))
             // Akku-Balken
             Box(
@@ -384,6 +388,7 @@ fun FullChart(live: LiveState, prefs: Prefs) {
             Text(r.sourceText, color = Mint, fontSize = 14.sp, modifier = Modifier.padding(bottom = 9.dp))
             Spacer(Modifier.weight(1f))
             Column(horizontalAlignment = Alignment.End) {
+                remainText(live)?.let { Text(it, color = Neon, fontSize = 14.sp, maxLines = 1) }
                 if (r.charging && data.isNotEmpty())
                     Text(fmt("Ø %.1f W  ·  max %.1f W", avg, live.peak), color = Mint, fontSize = 14.sp)
                 Text(fmt("%.2f V  ·  %.2f A  ·  %d %%  ·  %.1f °C",

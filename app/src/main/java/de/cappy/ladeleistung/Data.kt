@@ -18,7 +18,9 @@ data class Reading(
     val rawCurrent: Int = 0,       // Rohwert von BATTERY_PROPERTY_CURRENT_NOW
     val levelPct: Int = 0,
     val tempC: Float = 0f,
-    val supported: Boolean = true
+    val supported: Boolean = true,
+    val sysRemainMs: Long = -1,     // Android-Schätzung bis voll (computeChargeTimeRemaining), -1 = unbekannt
+    val chargeUah: Int = -1         // Ladungszähler in µAh (BATTERY_PROPERTY_CHARGE_COUNTER), -1 = nicht verfügbar
 ) {
     val charging get() = plugged != 0
     val watts get() = voltageMv / 1000f * currentA
@@ -64,7 +66,10 @@ class BatteryReader(private val ctx: Context) {
             rawCurrent = raw,
             levelPct = if (level >= 0 && scale > 0) level * 100 / scale else 0,
             tempC = (i?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0) / 10f,
-            supported = supported
+            supported = supported,
+            sysRemainMs = try { bm.computeChargeTimeRemaining() } catch (_: Exception) { -1L },
+            chargeUah = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CHARGE_COUNTER)
+                .let { if (it == Int.MIN_VALUE || it <= 0) -1 else it }
         )
     }
 }
@@ -75,6 +80,67 @@ class LiveState {
     val history = mutableStateListOf<Float>()
     var peak by mutableFloatStateOf(0f)
     var capacity by mutableIntStateOf(120)
+    /** Restladezeit bis voll in ms, -1 = noch unbekannt */
+    var remainMs by mutableLongStateOf(-1L)
+    /** true = Wert von Android, false = eigene Schätzung */
+    var remainFromSystem by mutableStateOf(false)
+    val estimator = RemainEstimator()
+}
+
+/**
+ * Eigene Schätzung der Restladezeit, falls Android keinen Wert liefert.
+ * Merkt sich höchstens alle 10 s einen Messpunkt (Zeit, Ladungszähler, Ladestand) der letzten 10 Minuten.
+ * Ab 2 Minuten Messdauer:
+ *  - mit Ladungszähler: Kapazität ≈ Zähler × 100 / Ladestand, Rest = (Kapazität − Zähler) / Laderate
+ *  - sonst über den Anstieg des Ladestands in Prozent pro Minute
+ * Lineare Hochrechnung: gegen Ende (ab ca. 80 %) lädt das Handy langsamer, die Zeit ist dann eher zu kurz.
+ */
+class RemainEstimator {
+    private data class P(val t: Long, val uah: Int, val pct: Int)
+    private val pts = ArrayDeque<P>()
+
+    fun reset() = pts.clear()
+
+    fun add(r: Reading, now: Long = System.currentTimeMillis()): Long {
+        if (pts.isEmpty() || now - pts.last().t >= 10_000) pts.addLast(P(now, r.chargeUah, r.levelPct))
+        while (pts.size > 2 && now - pts.first().t > 10 * 60_000) pts.removeFirst()
+        val a = pts.first(); val b = pts.last()
+        val dt = b.t - a.t
+        if (dt < 120_000 || r.levelPct >= 100) return -1
+        if (a.uah > 0 && b.uah > a.uah && r.levelPct > 0) {
+            val rate = (b.uah - a.uah).toDouble() / dt            // µAh pro ms
+            val cap = b.uah * 100.0 / r.levelPct
+            val rest = cap - b.uah
+            if (rest > 0) return (rest / rate).toLong()
+        }
+        if (b.pct > a.pct) {
+            val rate = (b.pct - a.pct).toDouble() / dt            // % pro ms
+            return ((100 - r.levelPct) / rate).toLong()
+        }
+        return -1
+    }
+}
+
+/** "1 h 12 min", "45 min", "< 1 min" */
+fun fmtDuration(ms: Long): String {
+    val min = (ms + 59_999) / 60_000
+    return when {
+        min < 1 -> "< 1 min"
+        min < 60 -> "$min min"
+        else -> "${min / 60} h ${min % 60} min"
+    }
+}
+
+/** Kurztext für die Anzeige: "voll in 1 h 12 min · ca. 16:24" */
+fun remainText(live: LiveState): String? {
+    val r = live.reading
+    if (!r.charging) return null
+    if (r.full || r.levelPct >= 100) return "Voll geladen"
+    val ms = live.remainMs
+    if (ms <= 0) return "Restladezeit wird berechnet …"
+    val at = java.text.SimpleDateFormat("HH:mm", java.util.Locale.GERMANY).format(java.util.Date(System.currentTimeMillis() + ms))
+    return "Voll in " + (if (live.remainFromSystem) "" else "ca. ") + fmtDuration(ms) + " · " + at + " Uhr" +
+        (if (live.remainFromSystem) "" else " (geschätzt)")
 }
 
 @Composable
@@ -88,8 +154,13 @@ fun rememberLive(prefs: Prefs): LiveState {
         s.capacity = 60_000 / interval
         while (true) {
             val r = reader.read(unit)
-            if (r.charging != s.reading.charging) { s.history.clear(); s.peak = 0f }
+            if (r.charging != s.reading.charging) { s.history.clear(); s.peak = 0f; s.estimator.reset(); s.remainMs = -1 }
             s.reading = r
+            if (r.charging) {
+                val own = s.estimator.add(r)
+                if (r.sysRemainMs > 0) { s.remainMs = r.sysRemainMs; s.remainFromSystem = true }
+                else { s.remainMs = own; s.remainFromSystem = false }
+            }
             prefs.checkPause(r)
             if (r.charging) {
                 s.history.add(r.watts)
