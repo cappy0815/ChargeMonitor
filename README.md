@@ -5,8 +5,10 @@ Android-App im dunkelgrünen Design, entstanden für das Samsung Galaxy S25 Ultr
 
 **Download:** [cappy0815.github.io](https://cappy0815.github.io/#charge-monitor) · aktuelle Version **1.8**
 
-<!-- Screenshot: Datei als docs/screenshot.png hochladen, dann die nächste Zeile einkommentieren -->
-<!-- ![Charge Monitor](docs/screenshot.png) -->
+<p>
+  <img src="docs/mainscreen.jpg" width="300" alt="Hauptseite: Ladeleistung im Ring, Restladezeit, Spannung, Strom, Ladestand, Temperatur und Verlauf">
+  <img src="docs/savescreen.jpg" width="300" alt="Standby-Anzeige: analoge Uhr, Ladeleistung, Restladezeit und Ladestand auf schwarzem Grund">
+</p>
 
 ## Funktionen
 
